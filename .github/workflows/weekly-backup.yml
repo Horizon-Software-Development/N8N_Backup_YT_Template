@@ -1,0 +1,40 @@
+name: Weekly n8n Workflow Backup
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'  # Every Sunday at 5:00 AM UTC Weekly
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary python-dotenv
+
+      - name: Run backup script
+        run: python scripts/backup_workflows.py
+
+      - name: Commit and push .zip
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add n8n-backup-*.zip
+          git commit -m "🧠 Weekly n8n workflow backup - $(date -u +'%Y-%m-%d')" || echo "No changes"
+          git push
